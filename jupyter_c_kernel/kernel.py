@@ -84,7 +84,12 @@ class CKernel(Kernel):
         os.close(mastertemp[0])
         self.master_path = mastertemp[1]
         filepath = path.join(path.dirname(path.realpath(__file__)), 'resources', 'master.c')
-        subprocess.call(['gcc', filepath, '-std=c11', '-rdynamic', '-ldl', '-o', self.master_path])
+        subprocess.call(['gcc', filepath, '-std=c99', '-rdynamic', '-ldl',
+            '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
+            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
+            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
+            '-fsanitize=bounds', '-fsanitize=object-size', 
+            '-fsanitize-address-use-after-scope', '-fstack-protector-all', '-o', self.master_path])
 
     def cleanup_files(self):
         """Remove all the temporary files created by the kernel"""
