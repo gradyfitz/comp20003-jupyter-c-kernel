@@ -118,12 +118,12 @@ class CKernel(Kernel):
         # rdynamic -> Allows dlopen to open the compiled result as a process by adding all symbols.
         # shared -> Make a shared object which can be linked to make an executable. Needed for rdynamic iirc.
         # fpack-struct -> No padding is present in structs.
-        # fsanatize=address -> turn on address sanitisation, used to detect memory errors where possible.
-        # fsanatize=leak -> detect memory leaks using address sanatiser.
-        # fsanatize=undefined -> turn on undefined behaviour sanitizer.
-        # fsanatize=shift -> check for undefined bit shift errors.
-        # fsanatize=vla-bound -> check for negative length variable length arrays.
-        # fsanatize=null -> check for NULL pointer dereferences.
+        # fsanitize=address -> turn on address sanitisation, used to detect memory errors where possible.
+        # fsanitize=leak -> detect memory leaks using address sanatiser.
+        # fsanitize=undefined -> turn on undefined behaviour sanitizer.
+        # fsanitize=shift -> check for undefined bit shift errors.
+        # fsanitize=vla-bound -> check for negative length variable length arrays.
+        # fsanitize=null -> check for NULL pointer dereferences.
         # fsanitize=bounds -> check array bounds where possible.
         # fsanitize=object-size -> check memory references don't overflow their allocated size.
         # fsanitize-address-use-after-scope -> this shouldn't come up, but in nested scopes, 
@@ -131,8 +131,8 @@ class CKernel(Kernel):
         # fstack-protector-all -> protects against a few redirection attacks.
         
         cflags = ['-std=c99', '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
-            '-rdynamic', '-fsanitize=address', '-fsanatize=leak', '-fsanatize=undefined', 
-            '-fsanatize=shift', '-fsanatize=vla-bound', '-fsanatize=null', 
+            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
+            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
             '-fsanitize=bounds', '-fsanitize=object-size', 
             '-fsanitize-address-use-after-scope', '-fstack-protector-all'] + cflags
         args = ['gcc', source_filename] + cflags + ['-o', binary_filename] + ldflags
