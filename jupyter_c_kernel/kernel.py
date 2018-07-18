@@ -210,6 +210,8 @@ class CKernel(Kernel):
         p = self.create_jupyter_subprocess(cmd=([binary_file.name] + magics['args']))
         if magics['stdin'] != "":
             self._write_to_stderr(("input: " + magics['stdin']).format(p.returncode))
+        if magics['stdout'] != "":
+            self._write_to_stderr(("expected output: " + magics['stdout']).format(p.returncode))
         p.stdin.write(magics['stdin'].encode(encoding="utf-8", errors="strict"))
         p.stdin.close()
         while p.poll() is None:
