@@ -3,7 +3,7 @@
 ## Use with Docker (recommended)
 
  * `docker pull gradyfitz/comp20003-jupyter-c-kernel:latest`
- * `docker run -p 8888:8888 gradyfitz/comp20003-jupyter-c-kernel:latest`
+ * `docker run -p 8888:8888 --cap-add SYS_PTRACE --security-opt seccomp=unconfined gradyfitz/comp20003-jupyter-c-kernel:latest`
  * Copy the given URL containing the token, and browse to it. For instance:
  
  ```
@@ -37,6 +37,20 @@
  docker after every time you restart your computer. This may be slightly 
  annoying, but hopefully shouldn't cause too much trouble, I'll be keeping an 
  eye out for a proper fix, either way.
+ 
+ To explain a few things about the run command:
+ 
+ * **SYS_PTRACE** allows a number of compiling directives to work, so it is 
+	important that it be specified as a capability of the docker.
+ * **security-opt seccomp=unconfined** turns off a few security-related system
+    calls, we need this to be able to remove adress space randomisation. The 
+	default profile is probably mostly fine, but if you want to use this outward
+	facing, you would want to take the default security profile 
+	https://github.com/moby/moby/blob/master/profiles/seccomp/default.json
+	and add the personality system call to the allowed system call list when
+	you run the system, as explained in
+	https://docs.docker.com/engine/security/seccomp/#pass-a-profile-for-a-container
+	
 
 ## Manual installation
 
