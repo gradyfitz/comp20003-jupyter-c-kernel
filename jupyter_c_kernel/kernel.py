@@ -23,7 +23,7 @@ class RealTimeSubprocess(subprocess.Popen):
         self._write_to_stdout = write_to_stdout
         self._write_to_stderr = write_to_stderr
 
-        super().__init__(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        super().__init__(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
 
         self._stdout_queue = Queue()
         self._stdout_thread = Thread(target=RealTimeSubprocess._enqueue_output, args=(self.stdout, self._stdout_queue))
@@ -84,7 +84,12 @@ class CKernel(Kernel):
         os.close(mastertemp[0])
         self.master_path = mastertemp[1]
         filepath = path.join(path.dirname(path.realpath(__file__)), 'resources', 'master.c')
-        subprocess.call(['gcc', filepath, '-std=c11', '-rdynamic', '-ldl', '-o', self.master_path])
+        subprocess.call(['gcc', filepath, '-std=c99', '-rdynamic', '-ldl',
+            '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
+            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
+            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
+            '-fsanitize=bounds', '-fsanitize=object-size', 
+            '-fsanitize-address-use-after-scope', '-fstack-protector-all', '-o', self.master_path])
 
     def cleanup_files(self):
         """Remove all the temporary files created by the kernel"""
@@ -107,7 +112,7 @@ class CKernel(Kernel):
     def _write_to_stderr(self, contents):
         self.send_response(self.iopub_socket, 'stream', {'name': 'stderr', 'text': contents})
 
-    def create_jupyter_subprocess(self, cmd):
+    def create_jupyter_subprocess(self, cmd, input_text=""):
         return RealTimeSubprocess(cmd,
                                   lambda contents: self._write_to_stdout(contents.decode()),
                                   lambda contents: self._write_to_stderr(contents.decode()))
@@ -130,28 +135,48 @@ class CKernel(Kernel):
         #     variables local to one nested scope are not accessible (even by pointers) in another,
         # fstack-protector-all -> protects against a few redirection attacks.
         
-        cflags = ['-std=c99', '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
-            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
+        cflags = ['-std=c99', '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct',
+            '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
             '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
             '-fsanitize=bounds', '-fsanitize=object-size', 
             '-fsanitize-address-use-after-scope', '-fstack-protector-all'] + cflags
         args = ['gcc', source_filename] + cflags + ['-o', binary_filename] + ldflags
-        return self.create_jupyter_subprocess(args)
+        return self.create_jupyter_subprocess(cmd=args)
 
     def _filter_magics(self, code):
 
         magics = {'cflags': [],
                   'ldflags': [],
+                  'stdin': "",
+                  'stdout': "",
                   'args': []}
 
         for line in code.splitlines():
             if line.startswith('//%'):
-                key, value = line[3:].split(":", 2)
-                key = key.strip().lower()
+                try:
+                    key, value = line[3:].split(":", 2)
+                    key = key.strip().lower()
+                except ValueError:
+                    # Don't want kernel to fail because an error was made in source code comment.
+                    continue
 
                 if key in ['ldflags', 'cflags']:
                     for flag in value.split():
                         magics[key] += [flag]
+                elif key == "stdin":
+                    # Could probably be a match instead, 
+                    # but this is easier for now.
+                    # Note: this is very basic, string escapes and the like
+                    #   aren't included.
+                    for stringContents in re.findall(r'\s*"([^"]*)"', value):
+                        magics['stdin'] += stringContents + "\n"
+                elif key == "stdout":
+                    # Could probably be a match instead, 
+                    # but this is easier for now.
+                    # Note: this is very basic, string escapes and the like
+                    #   aren't included.
+                    for stringContents in re.findall(r'\s*"([^"]*)"', value):
+                        magics['stdout'] += stringContents + "\n"
                 elif key == "args":
                     # Split arguments respecting quotes
                     for argument in re.findall(r'(?:[^\s,"]|"(?:\\.|[^"])*")+', value):
@@ -173,13 +198,22 @@ class CKernel(Kernel):
                     p.write_contents()
                 p.write_contents()
                 if p.returncode != 0:  # Compilation failed
+                    self._write_to_stderr("Kernel location: " + os.path.dirname(os.path.realpath(__file__)) + "\n")
                     self._write_to_stderr(
                             "[C kernel] GCC exited with code {}, the executable will not be executed".format(
                                     p.returncode))
                     return {'status': 'ok', 'execution_count': self.execution_count, 'payload': [],
                             'user_expressions': {}}
 
-        p = self.create_jupyter_subprocess([self.master_path, binary_file.name] + magics['args'])
+        #p = self.create_jupyter_subprocess([self.master_path, binary_file.name] + magics['args'])
+        # We deviate here to get sanitization at the cost of responsive output.
+        p = self.create_jupyter_subprocess(cmd=([binary_file.name] + magics['args']))
+        if magics['stdin'] != "":
+            self._write_to_stderr(("input: " + magics['stdin']).format(p.returncode))
+        if magics['stdout'] != "":
+            self._write_to_stderr(("expected output: " + magics['stdout']).format(p.returncode))
+        p.stdin.write(magics['stdin'].encode(encoding="utf-8", errors="strict"))
+        p.stdin.close()
         while p.poll() is None:
             p.write_contents()
         p.write_contents()
