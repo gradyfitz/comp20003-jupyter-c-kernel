@@ -149,6 +149,10 @@ class CKernel(Kernel):
                   'ldflags': [],
                   'stdin': "",
                   'stdout': "",
+                  'memtotalnoterm': "",
+                  'memtotal': "",
+                  'memaux': "",
+                  'memexpect': "",
                   'args': []}
 
         for line in code.splitlines():
@@ -177,6 +181,14 @@ class CKernel(Kernel):
                     #   aren't included.
                     for stringContents in re.findall(r'\s*"([^"]*)"', value):
                         magics['stdout'] += stringContents + "\n"
+                elif key == "memtotalnoterm":
+                    magics['memtotalnoterm'] += "If you only allocated " + value + " bytes, you have likely left off space for string termination.\n"
+                elif key == "memtotal":
+                    magics['memtotal'] += "If you only allocated " + value + " bytes, you may not have allocated space for the array, which may or may not be what you wanted to do.\n"
+                elif key == "memaux":
+                    magics['memaux'] += "If you only allocated " + value + " bytes, you may not have allocated space for each string in the array, only the pointers to each string.\n"
+                elif key == "memexpect":
+                    magics['memexpect'] += "You should expect to use about " + value + " bytes, you can use valgrind and gdb to check that you've got this right in next week's workshop.\n"
                 elif key == "args":
                     # Split arguments respecting quotes
                     for argument in re.findall(r'(?:[^\s,"]|"(?:\\.|[^"])*")+', value):
@@ -212,6 +224,16 @@ class CKernel(Kernel):
             self._write_to_stderr(("input: " + magics['stdin']).format(p.returncode))
         if magics['stdout'] != "":
             self._write_to_stderr(("expected output: " + magics['stdout']).format(p.returncode))
+        if magics['memtotalnoterm'] != "" or magics['memtotal'] != "" or magics['memaux'] != "" or magics['memexpect'] != "":
+            self._write_to_stderr("Some memory hints which you might like to verify for this question:\n".format(p.returncode))
+        if magics['memtotalnoterm'] != "":
+            self._write_to_stderr(magics['memtotalnoterm'].format(p.returncode))
+        if magics['memtotal'] != "":
+            self._write_to_stderr(magics['memtotal'].format(p.returncode))
+        if magics['memaux'] != "":
+            self._write_to_stderr(magics['memaux'].format(p.returncode))
+        if magics['memexpect'] != "":
+            self._write_to_stderr(magics['memexpect'].format(p.returncode))
         p.stdin.write(magics['stdin'].encode(encoding="utf-8", errors="strict"))
         p.stdin.close()
         while p.poll() is None:
