@@ -178,7 +178,7 @@ class CKernel(Kernel):
                     p.write_contents()
                 p.write_contents()
                 if p.returncode != 0:  # Compilation failed
-                    self._write_to_stderr("Kernel location: " + os.path.dirname(os.path.realpath(__file__)))
+                    self._write_to_stderr("Kernel location: " + os.path.dirname(os.path.realpath(__file__)) + "\n")
                     self._write_to_stderr(
                             "[C kernel] GCC exited with code {}, the executable will not be executed".format(
                                     p.returncode))
@@ -187,10 +187,6 @@ class CKernel(Kernel):
 
         #p = self.create_jupyter_subprocess([self.master_path, binary_file.name] + magics['args'])
         # We deviate here to get sanitization at the cost of responsive output.
-        p = self.create_jupyter_subprocess(["echo","Test"])
-        while p.poll() is None:
-            p.write_contents()
-        p.write_contents()
         p = self.create_jupyter_subprocess([binary_file.name] + magics['args'])
         while p.poll() is None:
             p.write_contents()
