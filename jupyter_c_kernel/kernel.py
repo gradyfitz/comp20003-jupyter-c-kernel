@@ -80,8 +80,6 @@ class CKernel(Kernel):
     def __init__(self, *args, **kwargs):
         super(CKernel, self).__init__(*args, **kwargs)
         self.files = []
-        # Try and disable ALSR
-        subprocess.call(['setarch', 'x86_64', '-RL', 'bash'])
         mastertemp = tempfile.mkstemp(suffix='.out')
         os.close(mastertemp[0])
         self.master_path = mastertemp[1]
