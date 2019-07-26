@@ -86,9 +86,9 @@ class CKernel(Kernel):
         filepath = path.join(path.dirname(path.realpath(__file__)), 'resources', 'master.c')
         subprocess.call(['gcc', filepath, '-std=c99', '-rdynamic', '-ldl',
             '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
-            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
-            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
-            '-fsanitize=bounds', '-fsanitize=object-size', 
+            '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined',
+            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null',
+            '-fsanitize=bounds', '-fsanitize=object-size',
             '-fsanitize-address-use-after-scope', '-fstack-protector-all', '-o', self.master_path])
 
     def cleanup_files(self):
@@ -131,14 +131,14 @@ class CKernel(Kernel):
         # fsanitize=null -> check for NULL pointer dereferences.
         # fsanitize=bounds -> check array bounds where possible.
         # fsanitize=object-size -> check memory references don't overflow their allocated size.
-        # fsanitize-address-use-after-scope -> this shouldn't come up, but in nested scopes, 
+        # fsanitize-address-use-after-scope -> this shouldn't come up, but in nested scopes,
         #     variables local to one nested scope are not accessible (even by pointers) in another,
         # fstack-protector-all -> protects against a few redirection attacks.
-        
+
         cflags = ['-std=c99', '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct',
-            '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined', 
-            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null', 
-            '-fsanitize=bounds', '-fsanitize=object-size', 
+            '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined',
+            '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null',
+            '-fsanitize=bounds', '-fsanitize=object-size',
             '-fsanitize-address-use-after-scope', '-fstack-protector-all'] + cflags
         args = ['gcc', source_filename] + cflags + ['-o', binary_filename] + ldflags
         return self.create_jupyter_subprocess(cmd=args)
@@ -153,6 +153,7 @@ class CKernel(Kernel):
                   'memtotal': "",
                   'memaux': "",
                   'memexpect': "",
+                  'test_script': [],
                   'args': []}
 
         for line in code.splitlines():
@@ -168,19 +169,21 @@ class CKernel(Kernel):
                     for flag in value.split():
                         magics[key] += [flag]
                 elif key == "stdin":
-                    # Could probably be a match instead, 
+                    # Could probably be a match instead,
                     # but this is easier for now.
                     # Note: this is very basic, string escapes and the like
                     #   aren't included.
                     for stringContents in re.findall(r'\s*"([^"]*)"', value):
                         magics['stdin'] += stringContents + "\n"
                 elif key == "stdout":
-                    # Could probably be a match instead, 
+                    # Could probably be a match instead,
                     # but this is easier for now.
                     # Note: this is very basic, string escapes and the like
                     #   aren't included.
                     for stringContents in re.findall(r'\s*"([^"]*)"', value):
                         magics['stdout'] += stringContents + "\n"
+                elif key == "test_script":
+                    magics['test_script'].append(value)
                 elif key == "memtotalnoterm":
                     magics['memtotalnoterm'] += "If you only allocated " + value + " bytes, you have likely left off space for string termination.\n"
                 elif key == "memtotal":
@@ -221,19 +224,19 @@ class CKernel(Kernel):
         # We deviate here to get sanitization at the cost of responsive output.
         p = self.create_jupyter_subprocess(cmd=([binary_file.name] + magics['args']))
         if magics['stdin'] != "":
-            self._write_to_stderr(("input: " + magics['stdin']).format(p.returncode))
+            self._write_to_stderr(("input: " + magics['stdin']))
         if magics['stdout'] != "":
-            self._write_to_stderr(("expected output: " + magics['stdout']).format(p.returncode))
+            self._write_to_stderr(("expected output: " + magics['stdout']))
         if magics['memtotalnoterm'] != "" or magics['memtotal'] != "" or magics['memaux'] != "" or magics['memexpect'] != "":
-            self._write_to_stderr("Some memory hints which you might like to verify for this question:\n".format(p.returncode))
+            self._write_to_stderr("Some memory hints which you might like to verify for this question:\n")
         if magics['memtotalnoterm'] != "":
-            self._write_to_stderr(magics['memtotalnoterm'].format(p.returncode))
+            self._write_to_stderr(magics['memtotalnoterm'])
         if magics['memtotal'] != "":
-            self._write_to_stderr(magics['memtotal'].format(p.returncode))
+            self._write_to_stderr(magics['memtotal'])
         if magics['memaux'] != "":
-            self._write_to_stderr(magics['memaux'].format(p.returncode))
+            self._write_to_stderr(magics['memaux'])
         if magics['memexpect'] != "":
-            self._write_to_stderr(magics['memexpect'].format(p.returncode))
+            self._write_to_stderr(magics['memexpect'])
         p.stdin.write(magics['stdin'].encode(encoding="utf-8", errors="strict"))
         p.stdin.close()
         while p.poll() is None:
@@ -242,6 +245,18 @@ class CKernel(Kernel):
 
         if p.returncode != 0:
             self._write_to_stderr("[C kernel] Executable exited with code {}".format(p.returncode))
+
+        if len(magics['test_script']) > 0:
+            for item in magics['test_script']:
+                self._write_to_stderr("Testing with script: " + item + ".\n")
+                subproc_commands = [['chmod'] + ['777'] + [item]] + [['/bin/bash'] + [item] + [binary_file.name]]
+                for subproc_command in subproc_commands:
+                    self._write_to_stderr("Command: " + str(subproc_command) + '\n')
+                    test_process = self.create_jupyter_subprocess(cmd=subproc_command)
+                    while test_process.poll() is None:
+                        test_process.write_contents()
+                    test_process.write_contents()
+
         return {'status': 'ok', 'execution_count': self.execution_count, 'payload': [], 'user_expressions': {}}
 
     def do_shutdown(self, restart):
