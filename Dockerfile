@@ -35,6 +35,9 @@ RUN jupyter serverextension enable --sys-prefix --py nbgrader
 RUN jupyter nbextension disable --sys-prefix course_list/main --section=tree
 RUN jupyter serverextension disable --sys-prefix nbgrader.server_extensions.course_list
 
+# Install GDB and valgrind
+RUN apt-get update && apt-get install -y gdb valgrind
+
 WORKDIR /home/$NB_USER/
 
 USER $NB_USER
