@@ -38,6 +38,8 @@ RUN jupyter serverextension disable --sys-prefix nbgrader.server_extensions.cour
 # Install GDB and valgrind
 RUN apt-get update && apt-get install -y gdb valgrind
 
+RUN /bin/bash jupyter_c_kernel/nbgrader_setup.sh /home/$NB_USER/.jupyter/
+
 WORKDIR /home/$NB_USER/
 
 USER $NB_USER
