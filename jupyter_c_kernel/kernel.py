@@ -84,7 +84,7 @@ class CKernel(Kernel):
         os.close(mastertemp[0])
         self.master_path = mastertemp[1]
         filepath = path.join(path.dirname(path.realpath(__file__)), 'resources', 'master.c')
-        subprocess.call(['gcc', filepath, '-std=c99', '-rdynamic', '-ldl',
+        subprocess.call(['gcc', filepath, '-rdynamic', '-ldl',
             '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct', '-shared',
             '-rdynamic', '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined',
             '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null',
@@ -135,7 +135,7 @@ class CKernel(Kernel):
         #     variables local to one nested scope are not accessible (even by pointers) in another,
         # fstack-protector-all -> protects against a few redirection attacks.
 
-        cflags = ['-std=c99', '-ggdb', '-fPIC', '-ftrapv', '-fpack-struct',
+        cflags = ['-ggdb', '-fPIC', '-ftrapv', '-fpack-struct',
             '-fsanitize=address', '-fsanitize=leak', '-fsanitize=undefined',
             '-fsanitize=shift', '-fsanitize=vla-bound', '-fsanitize=null',
             '-fsanitize=bounds', '-fsanitize=object-size',
