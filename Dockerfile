@@ -35,8 +35,11 @@ RUN jupyter serverextension enable --sys-prefix --py nbgrader
 RUN jupyter nbextension disable --sys-prefix course_list/main --section=tree
 RUN jupyter serverextension disable --sys-prefix nbgrader.server_extensions.course_list
 
-# Install GDB and valgrind
-RUN apt-get update && apt-get install -y gdb valgrind
+# Re-enable man pages
+RUN sed -i '/path-exclude=\/usr\/share\/man\/*/c\#path-exclude=\/usr\/share\/man\/*' /etc/dpkg/dpkg.cfg.d/excludes
+
+# Install GDB, valgrind and man pages.
+RUN apt-get update && apt-get install -y gdb valgrind manpages manpages-dev manpages-posix man
 
 RUN /bin/bash jupyter_c_kernel/nbgrader_setup.sh /opt/conda/etc/jupyter/
 
