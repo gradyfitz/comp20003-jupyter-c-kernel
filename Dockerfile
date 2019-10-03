@@ -39,7 +39,10 @@ RUN jupyter serverextension disable --sys-prefix nbgrader.server_extensions.cour
 RUN sed -i '/path-exclude=\/usr\/share\/man\/*/c\#path-exclude=\/usr\/share\/man\/*' /etc/dpkg/dpkg.cfg.d/excludes
 
 # Install GDB, valgrind and man pages.
-RUN apt-get update && apt-get install -y gdb valgrind manpages manpages-dev manpages-posix man
+RUN apt-get update && apt-get install -y gdb valgrind manpages manpages-dev manpages-posix man less vim
+
+# Install curses, used for an assignment. =)
+RUN apt-get update && apt-get install -y libncurses5-dev libncursesw5-dev
 
 RUN /bin/bash jupyter_c_kernel/nbgrader_setup.sh /opt/conda/etc/jupyter/
 
