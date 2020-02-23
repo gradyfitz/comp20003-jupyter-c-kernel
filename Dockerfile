@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir jupyter_c_kernel/
 RUN cd jupyter_c_kernel && install_c_kernel --user
 
 # Add nbgrader to python environment and install other python modules.
-RUN pip install --no-cache-dir nbgrader nbgitpuller pandas matplotlib seaborn numpy scipy sklearn pylab 
+RUN pip install --no-cache-dir nbgrader nbgitpuller pandas matplotlib seaborn numpy scipy sklearn sympy nose nltk
 RUN jupyter nbextension install --sys-prefix --py nbgrader --overwrite
 RUN jupyter nbextension enable --sys-prefix --py nbgrader
 RUN jupyter serverextension enable --sys-prefix --py nbgrader
