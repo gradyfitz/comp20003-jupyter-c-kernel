@@ -1,4 +1,4 @@
-FROM jupyter/minimal-notebook
+FROM jupyter/minimal-notebook:63d0df23b673
 MAINTAINER Grady Fitzpatrick <grady.fitzpatrick@unimelb.edu.au>
 
 # Note:
